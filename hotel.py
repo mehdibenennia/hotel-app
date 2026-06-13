@@ -1,143 +1,61 @@
 import streamlit as st
+from groq import Groq
 
-st.set_page_config(page_title="Homework Management System")
-
-# -----------------------------
-# Imaginary Database
-# -----------------------------
-
-homeworks = [
-    {
-        "student": "Ahmed",
-        "subject": "Python",
-        "title": "Variables and Data Types",
-        "due_date": "2026-06-20",
-        "status": "Pending",
-        "professor": "Mr. Karim"
-    },
-    {
-        "student": "Ahmed",
-        "subject": "Project Management",
-        "title": "Create a Gantt Chart",
-        "due_date": "2026-06-18",
-        "status": "Submitted",
-        "professor": "Ms. Salma"
-    },
-    {
-        "student": "Sara",
-        "subject": "Python",
-        "title": "Loops Exercise",
-        "due_date": "2026-06-21",
-        "status": "Pending",
-        "professor": "Mr. Karim"
-    },
-    {
-        "student": "Youssef",
-        "subject": "Python",
-        "title": "Functions Homework",
-        "due_date": "2026-06-23",
-        "status": "Pending",
-        "professor": "Mr. Karim"
-    }
-]
-
-students = ["Ahmed", "Sara", "Youssef"]
-professors = ["Mr. Karim", "Ms. Salma"]
-
-# -----------------------------
-# App Title
-# -----------------------------
-
-st.title("📚 Homework Management System")
-
-page = st.sidebar.radio(
-    "Choose Interface",
-    ["Student Portal", "Professor Portal"]
+st.set_page_config(
+    page_title="Groq Chatbot",
+    page_icon="🤖"
 )
 
-# ==================================================
-# STUDENT PORTAL
-# ==================================================
+st.title("🤖 Groq AI Chatbot")
+st.caption("Powered by Groq")
 
-if page == "Student Portal":
-
-    st.header("Student Portal")
-
-    selected_student = st.selectbox(
-        "Select Student",
-        students
+# Sidebar
+with st.sidebar:
+    groq_api_key = st.text_input(
+        "Groq API Key",
+        type="password"
     )
 
-    st.subheader("My Homework")
+if not groq_api_key:
+    st.info("Enter your Groq API Key in the sidebar.")
+    st.stop()
 
-    found = False
+client = Groq(api_key=groq_api_key)
 
-    for hw in homeworks:
-        if hw["student"] == selected_student:
+# Initialize chat history
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
-            found = True
+# Display chat history
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
 
-            with st.container():
-                st.markdown("---")
-                st.write(f"**Subject:** {hw['subject']}")
-                st.write(f"**Homework:** {hw['title']}")
-                st.write(f"**Due Date:** {hw['due_date']}")
-                st.write(f"**Status:** {hw['status']}")
+# User input
+if prompt := st.chat_input("Type your message..."):
 
-    if not found:
-        st.info("No homework assigned.")
-
-# ==================================================
-# PROFESSOR PORTAL
-# ==================================================
-
-else:
-
-    st.header("Professor Portal")
-
-    selected_prof = st.selectbox(
-        "Select Professor",
-        professors
+    st.session_state.messages.append(
+        {"role": "user", "content": prompt}
     )
 
-    st.subheader("Assigned Homework")
+    with st.chat_message("user"):
+        st.markdown(prompt)
 
-    for hw in homeworks:
+    with st.chat_message("assistant"):
 
-        if hw["professor"] == selected_prof:
+        response_placeholder = st.empty()
 
-            st.markdown("---")
-            st.write(f"Student: {hw['student']}")
-            st.write(f"Subject: {hw['subject']}")
-            st.write(f"Homework: {hw['title']}")
-            st.write(f"Due Date: {hw['due_date']}")
-            st.write(f"Status: {hw['status']}")
+        completion = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=st.session_state.messages,
+            temperature=0.7,
+            max_tokens=1024,
+        )
 
-    st.markdown("---")
-    st.subheader("Create New Homework")
+        response = completion.choices[0].message.content
 
-    student = st.selectbox(
-        "Assign to Student",
-        students
+        response_placeholder.markdown(response)
+
+    st.session_state.messages.append(
+        {"role": "assistant", "content": response}
     )
-
-    subject = st.text_input("Subject")
-
-    title = st.text_input("Homework Title")
-
-    due_date = st.date_input("Due Date")
-
-    if st.button("Assign Homework"):
-
-        new_homework = {
-            "student": student,
-            "subject": subject,
-            "title": title,
-            "due_date": str(due_date),
-            "status": "Pending",
-            "professor": selected_prof
-        }
-
-        homeworks.append(new_homework)
-
-        st.success("Homework assigned successfully!")
